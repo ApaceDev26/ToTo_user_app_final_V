@@ -1,0 +1,11 @@
+ToTo Food Delivery is a localized online food delivery and merchant-connecting platform designed to streamline food ordering and delivery services in the Bhairab and Ashuganj regions.
+
+Core Platform Features
+
+    User-Friendly Ordering App & Web Interface: Built to provide customers with an effortless way to browse local restaurant menus, customize food items, and place orders directly through mobile devices or the web platform (totofoodbd.com).
+
+    Merchant & Vendor Onboarding: Integrates local restaurants, cafes, and food providers, allowing them to expand their customer reach, showcase digital menus, and manage incoming orders efficiently via dedicated merchant portals.
+
+    Real-Time Delivery Logistics: Coordinates local delivery operations with a dedicated network of riders to ensure fast, reliable doorstep delivery across the coverage area.
+
+    Promotional & Marketing Integration: Incorporates targeted marketing campaigns, special discounts, automated customer notifications, and audio-visual promotional assets to engage local food lovers.

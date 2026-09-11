@@ -118,3 +118,7 @@ flutter:
           weight: 700
         - asset: assets/font/Poppins-Black.ttf
           weight: 900
+
+  # ঠিক এই ২টি লাইন স্পেসিং (Indentation) ঠিক রেখে যোগ করুন 🚀
+  config:
+    enable-swift-package-manager: false

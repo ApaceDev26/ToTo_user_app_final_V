@@ -11,25 +11,18 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # ২. প্রোজেক্ট ফাইল এডিট ছাড়াই গিটহাব রানারকে অটোমেটিক সাইনিংয়ে বাধ্য করা
-    update_project_provisioning(
-      xcodeproj: "ios/Runner.xcodeproj",
-      profile: "app-store",
-      build_configuration: "Release"
-    )
-
-    # ৩. মূল আইফোন বিল্ড তৈরি
+    # ২. মূল আইফোন বিল্ড তৈরি (অপ্রয়োজনীয় অ্যাকশনটি বাদ দেওয়া হয়েছে)
     build_app(
       workspace: "ios/Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
       clean: true,
       output_directory: "./build/ios/ipa",
-      # কোড সাইনিং ইরর এড়ানোর জন্য ক্লাউডকে পারমিশন দেওয়া
-      xcargs: "-allowProvisioningUpdates CODE_SIGN_STYLE=Automatic"
+      # এক্সকোড যাতে নিজেই আপনার এপিআই টোকেন ব্যবহার করে ক্লাউড থেকে প্রোফাইল আপডেট করে নেয়
+      xcargs: "-allowProvisioningUpdates"
     )
 
-    # ৪. অ্যাপল স্টোরে বিল্ড আপলোড
+    # ৩. অ্যাপল স্টোরে বিল্ড আপলোড
     deliver(
       api_key: api_key,
       ipa: "./build/ios/ipa/Runner.ipa",

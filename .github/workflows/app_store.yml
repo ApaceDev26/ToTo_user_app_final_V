@@ -19,11 +19,12 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      # ১. CocoaPods-এর গ্লোবাল ক্যাশ ডাটাবেজ আপডেট করার কমান্ড যুক্ত করা হয়েছে
-      - name: Install Pods and Dependencies
+      # ১. আইওএস ফোল্ডারের পুরনো ক্যাশ ও লক ফাইল ডিলিট করে সম্পূর্ণ ফ্রেশ পড ইনস্টল করার স্ক্রিপ্ট
+      - name: Clean and Install iOS Dependencies
         run: |
           flutter pub get
           cd ios
+          rm -rf Pods Podfile.lock /Users/runner/Library/Developer/Xcode/DerivedData
           pod repo update
           pod install --repo-update
 

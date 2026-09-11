@@ -19,10 +19,13 @@ jobs:
           channel: 'stable'
           architecture: x64
 
+      # ১. CocoaPods-এর গ্লোবাল ক্যাশ ডাটাবেজ আপডেট করার কমান্ড যুক্ত করা হয়েছে
       - name: Install Pods and Dependencies
         run: |
           flutter pub get
-          cd ios && pod install --repo-update
+          cd ios
+          pod repo update
+          pod install --repo-update
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1

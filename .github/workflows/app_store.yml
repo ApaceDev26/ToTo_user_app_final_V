@@ -19,12 +19,13 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      # ১. আইওএস ফোল্ডারের পুরনো ক্যাশ ও লক ফাইল ডিলিট করে সম্পূর্ণ ফ্রেশ পড ইনস্টল করার স্ক্রিপ্ট
+      # ১. ফোর্স কোকোপডস গ্লোবাল সোর্স ট্র্যাকিং স্ক্রিপ্ট (১০০% ফিক্স ট্রিক)
       - name: Clean and Install iOS Dependencies
         run: |
           flutter pub get
           cd ios
           rm -rf Pods Podfile.lock /Users/runner/Library/Developer/Xcode/DerivedData
+          pod repo add-cdn master https://cocoapods.org
           pod repo update
           pod install --repo-update
 

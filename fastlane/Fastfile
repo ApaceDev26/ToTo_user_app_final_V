@@ -11,15 +11,17 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # ২. মূল বিল্ডের ভেতরে সরাসরি api_key পাস করা (যাতে No Accounts এরর দূর হয়)
+    # ২. এক্সকোড বিল্ডের জন্য এপিআই কী সংযুক্ত করা (অফিশিয়াল এবং সঠিক মেথড)
     build_app(
       workspace: "ios/Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
       clean: true,
       output_directory: "./build/ios/ipa",
-      # এক্সকোড বিল্ডের নিজস্ব অথেন্টিকেশনের জন্য নিচের ২টি প্যারামিটার যুক্ত করা হলো
-      api_key: api_key,
+      # এক্সকোড যাতে ক্লাউডে কোনো অ্যাকাউন্ট লগইন ছাড়াই সরাসরি আপনার API Key ব্যবহার করতে পারে
+      export_options: {
+        api_key: api_key
+      },
       xcargs: "-allowProvisioningUpdates"
     )
 

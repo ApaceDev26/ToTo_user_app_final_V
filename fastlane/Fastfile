@@ -11,18 +11,18 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # ২. এক্সকোড বিল্ডের জন্য এপিআই কী সংযুক্ত করা (অফিশিয়াল এবং সঠিক মেথড)
+    # ২. সরাসরি এক্সকোড কম্পাইলার লেভেলে এপিআই কী ম্যাপ করা (xcargs ট্রিক)
     build_app(
       workspace: "ios/Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
       clean: true,
       output_directory: "./build/ios/ipa",
-      # এক্সকোড যাতে ক্লাউডে কোনো অ্যাকাউন্ট লগইন ছাড়াই সরাসরি আপনার API Key ব্যবহার করতে পারে
       export_options: {
         api_key: api_key
       },
-      xcargs: "-allowProvisioningUpdates"
+      # এখানে আমরা এক্সকোড কম্পাইলারকে সরাসরি এপিআই টোকেন দিয়ে অথেন্টিকেট করছি
+      xcargs: "-allowProvisioningUpdates -authenticationKeyID #{ENV['APP_STORE_CONNECT_KEY_ID']} -authenticationKeyIssuerID #{ENV['APP_STORE_CONNECT_ISSUER_ID']}"
     )
 
     # ৩. অ্যাপল স্টোরে বিল্ড আপলোড

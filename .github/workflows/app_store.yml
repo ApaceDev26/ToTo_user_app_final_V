@@ -19,15 +19,11 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      # ১. ফোর্স কোকোপডস গ্লোবাল সোর্স ট্র্যাকিং স্ক্রিপ্ট (১০০% ফিক্স ট্রিক)
-      - name: Clean and Install iOS Dependencies
+      # ১. কোনো ম্যানুয়াল পড কমান্ড ছাড়া সরাসরি ফ্ল্যাটারের মাধ্যমে ফ্রেশ বিল্ড প্রিপারেশন করা
+      - name: Clean and Pre-Build via Flutter
         run: |
           flutter pub get
-          cd ios
-          rm -rf Pods Podfile.lock /Users/runner/Library/Developer/Xcode/DerivedData
-          pod repo add-cdn master https://cocoapods.org
-          pod repo update
-          pod install --repo-update
+          flutter build ios --config-only
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1

@@ -3,7 +3,7 @@ default_platform(:ios)
 platform :ios do
   lane :upload_build_to_app_store do
 
-    # ১. এপিআই কী দিয়ে লগইন
+    # ১. এপিআই কী জেনারেট করা
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
@@ -11,14 +11,15 @@ platform :ios do
       is_key_content_base64: false
     )
 
-    # ২. মূল আইফোন বিল্ড তৈরি (অপ্রয়োজনীয় অ্যাকশনটি বাদ দেওয়া হয়েছে)
+    # ২. মূল বিল্ডের ভেতরে সরাসরি api_key পাস করা (যাতে No Accounts এরর দূর হয়)
     build_app(
       workspace: "ios/Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
       clean: true,
       output_directory: "./build/ios/ipa",
-      # এক্সকোড যাতে নিজেই আপনার এপিআই টোকেন ব্যবহার করে ক্লাউড থেকে প্রোফাইল আপডেট করে নেয়
+      # এক্সকোড বিল্ডের নিজস্ব অথেন্টিকেশনের জন্য নিচের ২টি প্যারামিটার যুক্ত করা হলো
+      api_key: api_key,
       xcargs: "-allowProvisioningUpdates"
     )
 

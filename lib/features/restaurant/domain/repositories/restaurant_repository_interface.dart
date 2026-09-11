@@ -1,0 +1,20 @@
+import 'package:get/get_connect/http/src/response/response.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:toto_user/common/enums/data_source_enum.dart';
+import 'package:toto_user/common/models/product_model.dart';
+import 'package:toto_user/common/models/restaurant_model.dart';
+import 'package:toto_user/features/restaurant/domain/models/recommended_product_model.dart';
+import 'package:toto_user/interface/repository_interface.dart';
+
+abstract class RestaurantRepositoryInterface extends RepositoryInterface {
+  @override
+  Future<Restaurant?> get(String? id, {String slug = '', String? languageCode});
+  @override
+  Future<RestaurantModel?> getList({int? offset, String? filterBy, int? topRated, int? discount, int? veg, int? nonVeg, bool fromMap = false, DataSourceEnum? source});
+  Future<List<Restaurant>?> getRestaurantList({String? type, bool isRecentlyViewed = false, bool isOrderAgain = false, bool isPopular = false, bool isLatest = false, DataSourceEnum? source});
+  Future<RecommendedProductModel?> getRestaurantRecommendedItemList(int? restaurantId);
+  Future<List<Product>?> getCartRestaurantSuggestedItemList(int? restaurantID);
+  Future<ProductModel?> getRestaurantProductList(int? restaurantID, int offset, int? categoryID, String type);
+  Future<ProductModel?> getRestaurantSearchProductList(String searchText, String? storeID, int offset, String type);
+  Future<Response> getRoadDistance(LatLng origin, LatLng destination);
+}

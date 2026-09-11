@@ -1,0 +1,109 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('app/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace "com.toto.food.user"
+    compileSdk 36
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    lint {
+        disable 'InvalidPackage'
+        checkReleaseBuilds false
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId "com.toto.food.user"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion 36
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    // App Kotlin (MyFirebaseMessagingService) uses com.google.firebase.messaging.*; the
+    // Flutter plugin does not expose those APIs on :app's compile classpath. BoM matches
+    // firebase_core 3.8.0 (FirebaseSDKVersion 33.5.1).
+    implementation platform("com.google.firebase:firebase-bom:33.5.1")
+    implementation "com.google.firebase:firebase-messaging"
+    // Pin version — `latest.release` forces Maven metadata fetch every build (fails on DNS blips).
+    // Matches flutter_facebook_auth 6.2.0 (facebook-login:17.0.0).
+    implementation 'com.facebook.android:facebook-android-sdk:17.0.0'
+}
+
+// Suppress deprecation and unchecked warnings from dependencies
+tasks.withType(JavaCompile) {
+    options.compilerArgs += ['-Xlint:-deprecation', '-Xlint:-unchecked']
+}
+
+// Gradle 8.10+ tracks :app:compileFlutterBuild* outputs; Flutter deletes/rewrites
+// flutter_assets (e.g. under packages/country_code_picker/flags/) between runs.
+// That can surface as "Cannot access output property 'outputDirectory'" or
+// "Failed to create MD5 hash ... file ... does not exist" on Windows / multi-drive.
+afterEvaluate {
+    tasks.matching { it.name.startsWith("compileFlutterBuild") }.configureEach { t ->
+        t.doNotTrackState("Flutter tooling mutates intermediate flutter_assets; skip Gradle output snapshots.")
+    }
+}

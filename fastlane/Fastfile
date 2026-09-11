@@ -1,0 +1,45 @@
+default_platform(:ios)
+
+platform :ios do
+  lane :upload_build_to_app_store do
+
+    # ১. এপিআই কী দিয়ে লগইন
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"],
+      is_key_content_base64: false
+    )
+
+    # ২. প্রোজেক্ট ফাইল এডিট ছাড়াই গিটহাব রানারকে অটোমেটিক সাইনিংয়ে বাধ্য করা
+    update_project_provisioning(
+      xcodeproj: "ios/Runner.xcodeproj",
+      profile: "app-store",
+      build_configuration: "Release"
+    )
+
+    # ৩. মূল আইফোন বিল্ড তৈরি
+    build_app(
+      workspace: "ios/Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "./build/ios/ipa",
+      # কোড সাইনিং ইরর এড়ানোর জন্য ক্লাউডকে পারমিশন দেওয়া
+      xcargs: "-allowProvisioningUpdates CODE_SIGN_STYLE=Automatic"
+    )
+
+    # ৪. অ্যাপল স্টোরে বিল্ড আপলোড
+    deliver(
+      api_key: api_key,
+      ipa: "./build/ios/ipa/Runner.ipa",
+      skip_binary_upload: false,
+      force: true,
+      app_version: "1.0.0",
+      automatic_release: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false
+    )
+  end
+end

@@ -21,7 +21,6 @@ jobs:
           architecture: x64
           cache: true
 
-      # ১. ফ্ল্যাটারের অফিশিয়াল কমান্ড দিয়ে কোনো কোড সাইনিং ছাড়াই আইফোনের মূল বিল্ড তৈরি করা
       - name: Build Flutter iOS
         run: |
           flutter --version
@@ -32,17 +31,13 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
 
-      - name: Install Bundler & Fastlane
-        run: |
-          gem install bundler
-          bundle install
+      - name: Install Fastlane
+        run: gem install fastlane
 
-      # ২. ফাস্টলেনের সাহায্যে বিল্ডটি অ্যাপল স্টোরে পুশ করা
       - name: Deploy to App Store via Fastlane
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-        run: bundle exec fastlane ios upload_build_to_app_store
+        run: fastlane ios upload_build_to_app_store

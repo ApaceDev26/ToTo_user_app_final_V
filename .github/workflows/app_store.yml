@@ -19,25 +19,27 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      - name: Clean and Pre-Build via Flutter
+      # ১. ফ্ল্যাটারের অফিশিয়াল কমান্ড দিয়ে কোনো কোড সাইনিং ছাড়াই আইফোনের মূল বিল্ড (.ipa) তৈরি করা
+      - name: Build Flutter iOS IPA
         run: |
           flutter pub get
-          flutter build ios --config-only
+          flutter build ios --release --no-codesign
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
+          bundler-cache: true
 
-      # Gemfile ছাড়াই সরাসরি ফাস্টলেন ইনস্টল করার ব্যবস্থা
-      - name: Install Fastlane Directly
+      - name: Install Bundler & Fastlane
         run: |
-          gem install fastlane --no-document
+          gem install bundler
+          bundle install
 
-      - name: Build and Deploy to App Store
+      # ২. ফাস্টলেনের সাহায্যে তৈরি হওয়া .ipa ফাইলটি অ্যাপল স্টোরে পুশ করা
+      - name: Deploy to App Store via Fastlane
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-        # এখানে bundle exec কেটে সরাসরি fastlane রান করানো হচ্ছে
-        run: fastlane ios upload_build_to_app_store
+        run: bundle exec fastlane ios upload_build_to_app_store

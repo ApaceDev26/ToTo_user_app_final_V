@@ -19,7 +19,6 @@ jobs:
           channel: 'stable'
           architecture: x64
 
-      # ১. কোনো ম্যানুয়াল পড কমান্ড ছাড়া সরাসরি ফ্ল্যাটারের মাধ্যমে ফ্রেশ বিল্ড প্রিপারেশন করা
       - name: Clean and Pre-Build via Flutter
         run: |
           flutter pub get
@@ -29,16 +28,16 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
 
-      - name: Install Bundler & Fastlane
+      # Gemfile ছাড়াই সরাসরি ফাস্টলেন ইনস্টল করার ব্যবস্থা
+      - name: Install Fastlane Directly
         run: |
-          gem install bundler
-          bundle install
+          gem install fastlane --no-document
 
       - name: Build and Deploy to App Store
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-        run: bundle exec fastlane ios upload_build_to_app_store
+        # এখানে bundle exec কেটে সরাসরি fastlane রান করানো হচ্ছে
+        run: fastlane ios upload_build_to_app_store

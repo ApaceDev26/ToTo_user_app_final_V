@@ -83,7 +83,7 @@ jobs:
         run: |
           flutter build ipa \
             --release \
-            --export-method app-store
+            --export-options-plist=ios/ExportOptions.plist
 
       - name: Verify IPA
         run: |
@@ -96,3 +96,4 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: fastlane ios upload_build_to_app_store
+

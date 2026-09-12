@@ -14,7 +14,7 @@ platform :ios do
     # ২. সরাসরি আইপিএ ফাইলটি অ্যাপল স্টোরে আপলোড করার নির্দেশ
     deliver(
       api_key: api_key,
-      ipa: "./build/ios/ipa/Runner.ipa",
+      ipa: "./build/ios/ipa/StackFood.ipa",
       skip_binary_upload: false,
       force: true,
       app_version: "1.0.0",

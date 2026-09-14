@@ -52,8 +52,6 @@
                 <string>ToTo Food uses your location to determine delivery availability and help you select an accurate delivery address.</string>
                 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
                 <string>ToTo Food uses your location to determine delivery availability and help you select and manage accurate delivery addresses.</string>
-		<key>NSMicrophoneUsageDescription</key>
-		<string>The application does not use this feature</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>This app requires access to the gallery to upload customer profile picture.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -86,4 +84,5 @@
 		<false/>
 	</dict>
 </plist>
+
 

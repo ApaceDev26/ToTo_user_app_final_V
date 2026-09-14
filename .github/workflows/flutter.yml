@@ -178,7 +178,7 @@ jobs:
           flutter build ipa -v \
             --release \
             --build-name=1.0.0 \
-            --build-number=4 \
+            --build-number=5 \
             --export-options-plist=ios/ExportOptions.plist \
             2>&1 | tee flutter_build.log
 

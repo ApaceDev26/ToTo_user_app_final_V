@@ -1,7 +1,10 @@
 name: toto_user
 description: A new Flutter application.
 publish_to: 'none' #
-version: 1.0.0+3
+
+
+version: 1.0.0+4
+
 
 environment:
   sdk: ^3.4.4
@@ -119,6 +122,9 @@ flutter:
         - asset: assets/font/Poppins-Black.ttf
           weight: 900
 
+
   # ঠিক এই ২টি লাইন স্পেসিং (Indentation) ঠিক রেখে যোগ করুন 🚀
   config:
     enable-swift-package-manager: false
+
+

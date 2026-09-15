@@ -46,6 +46,16 @@ class OrderTrackingScreenState extends State<OrderTrackingScreen>
   Set<Polyline> _polylines = HashSet<Polyline>();
   Timer? _timer;
 
+  // Route API optimization:
+  // Keep marker/order updates every 10 seconds, but refresh the paid route
+  // only when at least 60 seconds passed AND the delivery man moved 100+ meters.
+  DateTime? _lastRouteApiCallAt;
+  LatLng? _lastRouteApiDeliveryLocation;
+  static const Duration _routeApiCooldown = Duration(seconds: 60);
+  static const double _routeApiMinMovementMeters = 100.0;
+  bool _restaurantCustomerRouteLoaded = false;
+  bool _routeRequestInProgress = false;
+
   // Cache BitmapDescriptors to avoid recreating them on every update for smooth live movement
   BitmapDescriptor? _cachedRestaurantMarker;
   BitmapDescriptor? _cachedDeliveryBoyMarker;
@@ -424,11 +434,11 @@ class OrderTrackingScreenState extends State<OrderTrackingScreen>
             double.parse(restaurant.longitude!),
           );
           print(
-              '🎯 TEST ZOOM TO: Restaurant Location (${targetLocation.latitude}, ${targetLocation.longitude})');
+              'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ TEST ZOOM TO: Restaurant Location (${targetLocation.latitude}, ${targetLocation.longitude})');
         } else {
           targetLocation = centerBounds;
           print(
-              '🎯 TEST ZOOM TO: Center Bounds (${targetLocation.latitude}, ${targetLocation.longitude})');
+              'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ TEST ZOOM TO: Center Bounds (${targetLocation.latitude}, ${targetLocation.longitude})');
         }
 
         // Smooth zoom animation to target location with dramatic effect (only once)
@@ -779,156 +789,193 @@ class OrderTrackingScreenState extends State<OrderTrackingScreen>
 
   /// Create route polyline from restaurant to customer using real directions
   Future<void> _createRoutePolyline(OrderModel track) async {
-    _polylines.clear();
+    // Restaurant -> customer route is static for this order.
+    // Do not request Google Directions again after it has been created.
+    if (_restaurantCustomerRouteLoaded) {
+      return;
+    }
 
-    if (track.restaurant != null &&
-        track.restaurant!.latitude != null &&
-        track.restaurant!.longitude != null &&
-        track.deliveryAddress != null &&
-        track.deliveryAddress!.latitude != null &&
-        track.deliveryAddress!.longitude != null) {
-      LatLng restaurantLocation = LatLng(
-        double.parse(track.restaurant!.latitude!),
-        double.parse(track.restaurant!.longitude!),
-      );
+    if (track.restaurant == null ||
+        track.restaurant!.latitude == null ||
+        track.restaurant!.longitude == null ||
+        track.deliveryAddress == null ||
+        track.deliveryAddress!.latitude == null ||
+        track.deliveryAddress!.longitude == null) {
+      return;
+    }
 
-      LatLng customerLocation = LatLng(
-        double.parse(track.deliveryAddress!.latitude!),
-        double.parse(track.deliveryAddress!.longitude!),
-      );
+    final LatLng restaurantLocation = LatLng(
+      double.parse(track.restaurant!.latitude!),
+      double.parse(track.restaurant!.longitude!),
+    );
 
-      print('🗺️ FETCHING REAL ROUTE: Restaurant to Customer');
-      print(
-          'Restaurant: (${restaurantLocation.latitude}, ${restaurantLocation.longitude})');
-      print(
-          'Customer: (${customerLocation.latitude}, ${customerLocation.longitude})');
+    final LatLng customerLocation = LatLng(
+      double.parse(track.deliveryAddress!.latitude!),
+      double.parse(track.deliveryAddress!.longitude!),
+    );
 
-      // Test API key first
-      bool apiWorking = await DirectionsHelper.testApiKey();
-      print('🔑 API KEY TEST: ${apiWorking ? "WORKING" : "FAILED"}');
+    List<LatLng>? routePoints;
 
-      // Get real directions from Google Maps
-      List<LatLng>? routePoints =
-          await DirectionsHelper.getRestaurantToCustomerRoute(
+    try {
+      routePoints = await DirectionsHelper.getRestaurantToCustomerRoute(
         restaurant: restaurantLocation,
         customer: customerLocation,
       );
+    } catch (e) {
+      debugPrint('Restaurant to customer route request failed: $e');
+    }
 
-      if (routePoints != null && routePoints.isNotEmpty) {
-        // Create polyline with real road route
-        Polyline routePolyline = Polyline(
+    final Set<Polyline> newPolylines = <Polyline>{};
+
+    if (routePoints != null && routePoints.isNotEmpty) {
+      newPolylines.add(
+        Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: routePoints,
           color: Colors.blue,
           width: 4,
           patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
+        ),
+      );
+    } else {
+      final List<LatLng> curvedPath = DirectionsHelper.createCurvedPath(
+        restaurantLocation,
+        customerLocation,
+        segments: 25,
+      );
 
-        _polylines.add(routePolyline);
-        print('✅ REAL ROUTE CREATED: ${routePoints.length} road points');
-      } else {
-        // Fallback to curved path if directions fail (better than straight line)
-        print('⚠️ FALLBACK TO CURVED PATH: Directions API failed');
-        List<LatLng> curvedPath = DirectionsHelper.createCurvedPath(
-          restaurantLocation,
-          customerLocation,
-          segments: 25,
-        );
-        Polyline fallbackPolyline = Polyline(
+      newPolylines.add(
+        Polyline(
           polylineId: const PolylineId('delivery_route'),
           points: curvedPath,
           color: Colors.blue,
           width: 4,
           patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-        _polylines.add(fallbackPolyline);
-      }
+        ),
+      );
     }
+
+    _polylines
+      ..clear()
+      ..addAll(newPolylines);
+
+    _restaurantCustomerRouteLoaded = true;
   }
 
-  /// Update route polyline with delivery man's current position using real directions
+  /// Update route polyline with delivery man's current position using real directions.
+  /// The live marker can still update every 10 seconds, but Google Directions
+  /// is refreshed only after the cooldown AND meaningful rider movement.
   Future<void> _updateRouteWithDeliveryMan(OrderModel track) async {
-    _polylines.clear();
+    if (track.restaurant == null ||
+        track.restaurant!.latitude == null ||
+        track.restaurant!.longitude == null ||
+        track.deliveryAddress == null ||
+        track.deliveryAddress!.latitude == null ||
+        track.deliveryAddress!.longitude == null) {
+      return;
+    }
 
-    if (track.restaurant != null &&
-        track.restaurant!.latitude != null &&
-        track.restaurant!.longitude != null &&
-        track.deliveryAddress != null &&
-        track.deliveryAddress!.latitude != null &&
-        track.deliveryAddress!.longitude != null) {
-      LatLng restaurantLocation = LatLng(
-        double.parse(track.restaurant!.latitude!),
-        double.parse(track.restaurant!.longitude!),
+    final LatLng customerLocation = LatLng(
+      double.parse(track.deliveryAddress!.latitude!),
+      double.parse(track.deliveryAddress!.longitude!),
+    );
+
+    LatLng? deliveryManLocation;
+    if (track.deliveryMan != null &&
+        track.deliveryMan!.lat != null &&
+        track.deliveryMan!.lng != null) {
+      deliveryManLocation = LatLng(
+        double.parse(track.deliveryMan!.lat!),
+        double.parse(track.deliveryMan!.lng!),
+      );
+    }
+
+    // If delivery-man coordinates are temporarily unavailable,
+    // keep the existing route. Load restaurant -> customer route only once.
+    if (deliveryManLocation == null) {
+      if (!_restaurantCustomerRouteLoaded) {
+        await _createRoutePolyline(track);
+      }
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+
+    if (_lastRouteApiCallAt != null && _lastRouteApiDeliveryLocation != null) {
+      final Duration elapsed = now.difference(_lastRouteApiCallAt!);
+      final double movedMeters = Geolocator.distanceBetween(
+        _lastRouteApiDeliveryLocation!.latitude,
+        _lastRouteApiDeliveryLocation!.longitude,
+        deliveryManLocation.latitude,
+        deliveryManLocation.longitude,
       );
 
-      LatLng customerLocation = LatLng(
-        double.parse(track.deliveryAddress!.latitude!),
-        double.parse(track.deliveryAddress!.longitude!),
+      // Do not clear the existing polyline here. Keeping it prevents the route
+      // from disappearing while a paid route refresh is intentionally skipped.
+      if (elapsed < _routeApiCooldown ||
+          movedMeters < _routeApiMinMovementMeters) {
+        return;
+      }
+    }
+
+    if (_routeRequestInProgress) {
+      return;
+    }
+
+    _routeRequestInProgress = true;
+
+    List<LatLng>? routePoints;
+
+    try {
+      routePoints = await DirectionsHelper.getDirections(
+        origin: deliveryManLocation,
+        destination: customerLocation,
       );
 
-      LatLng? deliveryManLocation;
-      if (track.deliveryMan != null &&
-          track.deliveryMan!.lat != null &&
-          track.deliveryMan!.lng != null) {
-        deliveryManLocation = LatLng(
-          double.parse(track.deliveryMan!.lat!),
-          double.parse(track.deliveryMan!.lng!),
-        );
-        print(
-            '🚚 DELIVERY MAN POSITION: (${deliveryManLocation.latitude}, ${deliveryManLocation.longitude})');
-      }
+      // Count only an actual attempted route refresh toward the cooldown.
+      _lastRouteApiCallAt = now;
+      _lastRouteApiDeliveryLocation = deliveryManLocation;
+    } catch (e) {
+      debugPrint('Delivery route request failed: $e');
 
-      print(
-          '🗺️ FETCHING REAL DELIVERY ROUTE: Delivery Man → Customer (remaining path)');
+      // Prevent repeated API retries every 10 seconds after a failed request.
+      _lastRouteApiCallAt = now;
+      _lastRouteApiDeliveryLocation = deliveryManLocation;
+    } finally {
+      _routeRequestInProgress = false;
+    }
 
-      // Get route from delivery man's current position to customer (not from restaurant)
-      List<LatLng>? routePoints;
-      if (deliveryManLocation != null) {
-        // Get route from delivery man's current position to customer
-        routePoints = await DirectionsHelper.getDirections(
-          origin: deliveryManLocation,
-          destination: customerLocation,
-        );
-      } else {
-        // Fallback to restaurant to customer if no delivery man location
-        routePoints = await DirectionsHelper.getRestaurantToCustomerRoute(
-          restaurant: restaurantLocation,
-          customer: customerLocation,
-        );
-      }
+    if (routePoints != null && routePoints.isNotEmpty) {
+      final Polyline routePolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: routePoints,
+        color: Colors.green,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
 
-      if (routePoints != null && routePoints.isNotEmpty) {
-        // Create polyline with real road route
-        Polyline routePolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: routePoints,
-          color: Colors.green,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
+      _polylines
+        ..clear()
+        ..add(routePolyline);
+    } else {
+      final LatLng startPoint = deliveryManLocation;
+      final List<LatLng> curvedPath = DirectionsHelper.createCurvedPath(
+        startPoint,
+        customerLocation,
+        segments: 25,
+      );
 
-        _polylines.add(routePolyline);
-        print(
-            '✅ REAL DELIVERY ROUTE CREATED: ${routePoints.length} road points (remaining path)');
-      } else {
-        // Fallback to curved path if directions fail (better than straight line)
-        print('⚠️ FALLBACK TO CURVED PATH: Directions API failed');
-        LatLng startPoint = deliveryManLocation ?? restaurantLocation;
-        List<LatLng> curvedPath = DirectionsHelper.createCurvedPath(
-          startPoint,
-          customerLocation,
-          segments: 25,
-        );
+      final Polyline fallbackPolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: curvedPath,
+        color: Colors.green,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
 
-        Polyline fallbackPolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: curvedPath,
-          color: Colors.green,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-        _polylines.add(fallbackPolyline);
-      }
+      _polylines
+        ..clear()
+        ..add(fallbackPolyline);
     }
   }
 
@@ -948,14 +995,14 @@ class OrderTrackingScreenState extends State<OrderTrackingScreen>
         double.parse(track.restaurant!.longitude!),
       );
       print(
-          '🎯 INITIAL TEST ZOOM TO: Restaurant Location (${targetLocation.latitude}, ${targetLocation.longitude})');
+          'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ INITIAL TEST ZOOM TO: Restaurant Location (${targetLocation.latitude}, ${targetLocation.longitude})');
     } else {
       targetLocation = LatLng(
         double.parse(track.deliveryAddress!.latitude!),
         double.parse(track.deliveryAddress!.longitude!),
       );
       print(
-          '🎯 INITIAL TEST ZOOM TO: Delivery Address (${targetLocation.latitude}, ${targetLocation.longitude})');
+          'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ INITIAL TEST ZOOM TO: Delivery Address (${targetLocation.latitude}, ${targetLocation.longitude})');
     }
 
     // Start with a lower zoom level to create zoom IN effect

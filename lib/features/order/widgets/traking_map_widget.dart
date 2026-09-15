@@ -15,6 +15,8 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:collection';
 
+import 'package:geolocator/geolocator.dart';
+
 class TrackingMapWidget extends StatefulWidget {
   final OrderModel? track;
   const TrackingMapWidget({super.key, required this.track});
@@ -29,6 +31,15 @@ class _TrackingMapWidgetState extends State<TrackingMapWidget> {
   bool _hasAnimated = false; // Track if initial animation has been shown
   Set<Marker> _markers = HashSet<Marker>();
   Set<Polyline> _polylines = HashSet<Polyline>();
+
+  DateTime? _lastRouteApiCallAt;
+  LatLng? _lastRouteApiDeliveryLocation;
+
+  static const Duration _routeApiCooldown = Duration(seconds: 60);
+  static const double _routeApiMinMovementMeters = 100.0;
+
+  bool _restaurantCustomerRouteLoaded = false;
+  bool _routeRequestInProgress = false;
 
   @override
   void dispose() {
@@ -319,133 +330,176 @@ class _TrackingMapWidgetState extends State<TrackingMapWidget> {
 
   /// Create route polyline from restaurant to customer using real directions
   Future<void> _createRoutePolyline(OrderModel track) async {
-    _polylines.clear();
+    // Restaurant -> customer route is static for this order.
+    // Load it only once instead of requesting Google Directions repeatedly.
+    if (_restaurantCustomerRouteLoaded) {
+      return;
+    }
 
-    if (track.restaurant != null &&
-        track.restaurant!.latitude != null &&
-        track.restaurant!.longitude != null &&
-        track.deliveryAddress != null &&
-        track.deliveryAddress!.latitude != null &&
-        track.deliveryAddress!.longitude != null) {
-      LatLng restaurantLocation = LatLng(
-        double.parse(track.restaurant!.latitude!),
-        double.parse(track.restaurant!.longitude!),
-      );
+    if (track.restaurant == null ||
+        track.restaurant!.latitude == null ||
+        track.restaurant!.longitude == null ||
+        track.deliveryAddress == null ||
+        track.deliveryAddress!.latitude == null ||
+        track.deliveryAddress!.longitude == null) {
+      return;
+    }
 
-      LatLng customerLocation = LatLng(
-        double.parse(track.deliveryAddress!.latitude!),
-        double.parse(track.deliveryAddress!.longitude!),
-      );
+    final LatLng restaurantLocation = LatLng(
+      double.parse(track.restaurant!.latitude!),
+      double.parse(track.restaurant!.longitude!),
+    );
 
-      // Get real directions from Google Maps
-      List<LatLng>? routePoints =
-          await DirectionsHelper.getRestaurantToCustomerRoute(
+    final LatLng customerLocation = LatLng(
+      double.parse(track.deliveryAddress!.latitude!),
+      double.parse(track.deliveryAddress!.longitude!),
+    );
+
+    if (_routeRequestInProgress) {
+      return;
+    }
+
+    _routeRequestInProgress = true;
+
+    List<LatLng>? routePoints;
+
+    try {
+      routePoints = await DirectionsHelper.getRestaurantToCustomerRoute(
         restaurant: restaurantLocation,
         customer: customerLocation,
       );
-
-      if (routePoints != null && routePoints.isNotEmpty) {
-        // Create polyline with real road route
-        Polyline routePolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: routePoints,
-          color: Colors.blue,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-
-        _polylines.add(routePolyline);
-      } else {
-        // Fallback to straight line if directions fail
-        Polyline fallbackPolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: [restaurantLocation, customerLocation],
-          color: Colors.blue,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-        _polylines.add(fallbackPolyline);
-      }
+    } catch (e) {
+      debugPrint('Guest restaurant route request failed: $e');
+    } finally {
+      _routeRequestInProgress = false;
     }
+
+    final Polyline routePolyline;
+
+    if (routePoints != null && routePoints.isNotEmpty) {
+      routePolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: routePoints,
+        color: Colors.blue,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+    } else {
+      routePolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: [restaurantLocation, customerLocation],
+        color: Colors.blue,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+    }
+
+    _polylines
+      ..clear()
+      ..add(routePolyline);
+
+    _restaurantCustomerRouteLoaded = true;
   }
 
   /// Update route polyline with delivery man's current position using real directions
   Future<void> _updateRouteWithDeliveryMan(OrderModel track) async {
-    _polylines.clear();
+    if (track.deliveryAddress == null ||
+        track.deliveryAddress!.latitude == null ||
+        track.deliveryAddress!.longitude == null) {
+      return;
+    }
 
-    if (track.restaurant != null &&
-        track.restaurant!.latitude != null &&
-        track.restaurant!.longitude != null &&
-        track.deliveryAddress != null &&
-        track.deliveryAddress!.latitude != null &&
-        track.deliveryAddress!.longitude != null) {
-      LatLng restaurantLocation = LatLng(
-        double.parse(track.restaurant!.latitude!),
-        double.parse(track.restaurant!.longitude!),
+    final LatLng customerLocation = LatLng(
+      double.parse(track.deliveryAddress!.latitude!),
+      double.parse(track.deliveryAddress!.longitude!),
+    );
+
+    LatLng? deliveryManLocation;
+
+    if (track.deliveryMan != null &&
+        track.deliveryMan!.lat != null &&
+        track.deliveryMan!.lng != null) {
+      deliveryManLocation = LatLng(
+        double.parse(track.deliveryMan!.lat!),
+        double.parse(track.deliveryMan!.lng!),
+      );
+    }
+
+    // Do not repeatedly request the static restaurant route while waiting
+    // for the delivery man's live coordinates.
+    if (deliveryManLocation == null) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+
+    if (_lastRouteApiCallAt != null && _lastRouteApiDeliveryLocation != null) {
+      final Duration elapsed = now.difference(_lastRouteApiCallAt!);
+
+      final double movedMeters = Geolocator.distanceBetween(
+        _lastRouteApiDeliveryLocation!.latitude,
+        _lastRouteApiDeliveryLocation!.longitude,
+        deliveryManLocation.latitude,
+        deliveryManLocation.longitude,
       );
 
-      LatLng customerLocation = LatLng(
-        double.parse(track.deliveryAddress!.latitude!),
-        double.parse(track.deliveryAddress!.longitude!),
-      );
-
-      LatLng? deliveryManLocation;
-      if (track.deliveryMan != null &&
-          track.deliveryMan!.lat != null &&
-          track.deliveryMan!.lng != null) {
-        deliveryManLocation = LatLng(
-          double.parse(track.deliveryMan!.lat!),
-          double.parse(track.deliveryMan!.lng!),
-        );
-      }
-
-      // Get route from delivery man's current position to customer (not from restaurant)
-      List<LatLng>? routePoints;
-      if (deliveryManLocation != null) {
-        // Get route from delivery man's current position to customer
-        routePoints = await DirectionsHelper.getDirections(
-          origin: deliveryManLocation,
-          destination: customerLocation,
-        );
-      } else {
-        // Fallback to restaurant to customer if no delivery man location
-        routePoints = await DirectionsHelper.getRestaurantToCustomerRoute(
-          restaurant: restaurantLocation,
-          customer: customerLocation,
-        );
-      }
-
-      if (routePoints != null && routePoints.isNotEmpty) {
-        // Create polyline with real road route
-        Polyline routePolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: routePoints,
-          color: Colors.green,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-
-        _polylines.add(routePolyline);
-      } else {
-        // Fallback to straight line if directions fail
-        List<LatLng> fallbackPoints = [];
-        if (deliveryManLocation != null) {
-          fallbackPoints.add(deliveryManLocation);
-        } else {
-          fallbackPoints.add(restaurantLocation);
-        }
-        fallbackPoints.add(customerLocation);
-
-        Polyline fallbackPolyline = Polyline(
-          polylineId: const PolylineId('delivery_route'),
-          points: fallbackPoints,
-          color: Colors.green,
-          width: 4,
-          patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-        );
-        _polylines.add(fallbackPolyline);
+      // Refresh only when BOTH cooldown and movement thresholds are met.
+      // Keep the existing polyline while the refresh is skipped.
+      if (elapsed < _routeApiCooldown ||
+          movedMeters < _routeApiMinMovementMeters) {
+        return;
       }
     }
+
+    if (_routeRequestInProgress) {
+      return;
+    }
+
+    _routeRequestInProgress = true;
+
+    List<LatLng>? routePoints;
+
+    try {
+      routePoints = await DirectionsHelper.getDirections(
+        origin: deliveryManLocation,
+        destination: customerLocation,
+      );
+
+      _lastRouteApiCallAt = DateTime.now();
+      _lastRouteApiDeliveryLocation = deliveryManLocation;
+    } catch (e) {
+      debugPrint('Guest delivery route request failed: $e');
+
+      // Count the failed attempt toward the cooldown to avoid retry storms.
+      _lastRouteApiCallAt = DateTime.now();
+      _lastRouteApiDeliveryLocation = deliveryManLocation;
+    } finally {
+      _routeRequestInProgress = false;
+    }
+
+    final Polyline routePolyline;
+
+    if (routePoints != null && routePoints.isNotEmpty) {
+      routePolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: routePoints,
+        color: Colors.green,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+    } else {
+      routePolyline = Polyline(
+        polylineId: const PolylineId('delivery_route'),
+        points: [deliveryManLocation, customerLocation],
+        color: Colors.green,
+        width: 4,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+    }
+
+    _polylines
+      ..clear()
+      ..add(routePolyline);
   }
 
   /// Get initial camera position based on order status

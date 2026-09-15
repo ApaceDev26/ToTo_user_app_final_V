@@ -20,7 +20,7 @@ class DirectionsHelper {
   }) async {
     // Use web-specific implementation on web platform to avoid CORS issues
     if (GetPlatform.isWeb) {
-      print('🌐 Using Web DirectionsService (JavaScript API)');
+      print('ðŸŒ Using Web DirectionsService (JavaScript API)');
       return await DirectionsHelperWeb.getDirections(
         origin: origin,
         destination: destination,
@@ -38,8 +38,7 @@ class DirectionsHelper {
         url += '&waypoints=${waypoint.latitude},${waypoint.longitude}';
       }
 
-      print('🗺️ FETCHING DIRECTIONS: $url');
-      print('🌐 Platform: ${GetPlatform.isWeb ? "WEB" : "MOBILE"}');
+      print('ðŸŒ Platform: ${GetPlatform.isWeb ? "WEB" : "MOBILE"}');
 
       final response = await http
           .get(
@@ -53,7 +52,7 @@ class DirectionsHelper {
           .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          print('⏱️ DIRECTIONS API TIMEOUT after 10 seconds');
+          print('â±ï¸ DIRECTIONS API TIMEOUT after 10 seconds');
           throw Exception('Directions API request timeout');
         },
       );
@@ -61,9 +60,7 @@ class DirectionsHelper {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        print('🗺️ DIRECTIONS API RESPONSE: ${data['status']}');
-        print(
-            '🗺️ FULL RESPONSE: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}...');
+        print('ðŸ—ºï¸ DIRECTIONS API RESPONSE: ${data['status']}');
 
         if (data['status'] == 'OK' && data['routes'].isNotEmpty) {
           List<LatLng> points = [];
@@ -72,11 +69,11 @@ class DirectionsHelper {
           final route = data['routes'][0];
           final legs = route['legs'];
 
-          print('🗺️ ROUTE LEGS: ${legs.length}');
+          print('ðŸ—ºï¸ ROUTE LEGS: ${legs.length}');
 
           for (var leg in legs) {
             final steps = leg['steps'];
-            print('🗺️ LEG STEPS: ${steps.length}');
+            print('ðŸ—ºï¸ LEG STEPS: ${steps.length}');
             for (var step in steps) {
               final polyline = step['polyline']['points'];
               // Decode the polyline
@@ -84,37 +81,35 @@ class DirectionsHelper {
             }
           }
 
-          print('✅ DIRECTIONS SUCCESS: ${points.length} points');
+          print('âœ… DIRECTIONS SUCCESS: ${points.length} points');
           return points;
         } else {
-          print('❌ DIRECTIONS ERROR: ${data['status']}');
+          print('âŒ DIRECTIONS ERROR: ${data['status']}');
           if (data['error_message'] != null) {
-            print('❌ ERROR MESSAGE: ${data['error_message']}');
+            print('âŒ ERROR MESSAGE: ${data['error_message']}');
           }
           if (data['status'] == 'REQUEST_DENIED') {
             print(
-                '⚠️ API KEY ISSUE: The API key may not have Directions API enabled or has restrictions');
+                'âš ï¸ API KEY ISSUE: The API key may not have Directions API enabled or has restrictions');
           }
           return null;
         }
       } else {
-        print('❌ HTTP ERROR: ${response.statusCode}');
-        print('❌ RESPONSE HEADERS: ${response.headers}');
-        print('❌ RESPONSE BODY: ${response.body}');
+        print('âŒ HTTP ERROR: ${response.statusCode}');
         if (GetPlatform.isWeb && response.statusCode == 0) {
           print(
-              '⚠️ CORS ERROR: This is likely a CORS (Cross-Origin Resource Sharing) issue.');
+              'âš ï¸ CORS ERROR: This is likely a CORS (Cross-Origin Resource Sharing) issue.');
           print(
-              '⚠️ SOLUTION: Enable CORS for the API key in Google Cloud Console or use a backend proxy.');
+              'âš ï¸ SOLUTION: Enable CORS for the API key in Google Cloud Console or use a backend proxy.');
         }
         return null;
       }
     } catch (e, stackTrace) {
-      print('❌ DIRECTIONS EXCEPTION: $e');
-      print('❌ STACK TRACE: $stackTrace');
+      print('âŒ DIRECTIONS EXCEPTION: $e');
+      print('âŒ STACK TRACE: $stackTrace');
       if (GetPlatform.isWeb && e.toString().contains('XMLHttpRequest')) {
         print(
-            '⚠️ This is a CORS error - the browser blocked the request to Google Maps API');
+            'âš ï¸ This is a CORS error - the browser blocked the request to Google Maps API');
       }
       return null;
     }
@@ -191,7 +186,7 @@ class DirectionsHelper {
 
       return result != null && result.isNotEmpty;
     } catch (e) {
-      print('❌ API KEY TEST FAILED: $e');
+      print('âŒ API KEY TEST FAILED: $e');
       return false;
     }
   }
@@ -215,7 +210,7 @@ class DirectionsHelper {
       double t = i / segments;
 
       // Quadratic bezier curve formula
-      // B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+      // B(t) = (1-t)Â²P0 + 2(1-t)tP1 + tÂ²P2
       double t2 = t * t;
       double mt = 1 - t;
       double mt2 = mt * mt;
@@ -233,7 +228,7 @@ class DirectionsHelper {
       points.add(LatLng(lat, lng));
     }
 
-    print('🎨 CREATED CURVED PATH: ${points.length} points (fallback mode)');
+    print('ðŸŽ¨ CREATED CURVED PATH: ${points.length} points (fallback mode)');
     return points;
   }
 }

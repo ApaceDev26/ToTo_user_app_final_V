@@ -64,7 +64,6 @@ class ProductViewWidget extends StatelessWidget {
               ? Container(
                   color: colors.canvas,
                   child: GridView.builder(
-                    key: UniqueKey(),
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -82,7 +81,7 @@ class ProductViewWidget extends StatelessWidget {
                           : isWebRestaurant!
                               ? 280
                               : showTheme1Restaurant
-                                  // Cover 118 + text block + cardGap ≈ 230+
+                                  // Cover 118 + text block + cardGap â‰ˆ 230+
                                   ? 236
                                   : 156,
                       crossAxisCount: ResponsiveHelper.isMobile(context) &&
@@ -129,7 +128,6 @@ class ProductViewWidget extends StatelessWidget {
           : Container(
               color: colors.canvas,
               child: GridView.builder(
-                key: UniqueKey(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisSpacing: Dimensions.paddingSizeLarge,
                   mainAxisSpacing: ResponsiveHelper.isDesktop(context)
